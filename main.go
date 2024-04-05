@@ -13,7 +13,7 @@ func checkBranchInRepo(repoPath, branchName string) {
 	cmd.Dir = repoPath
 
 	if err := cmd.Run(); err != nil {
-		fmt.Printf("Branch %s not found in %s\n", branchName, repoPath)
+		return
 	}
 
 	fmt.Printf("Branch %s found in %s\n", branchName, repoPath)
@@ -37,16 +37,23 @@ func main() {
 	reposDir := *dirP
 	branchName := *branchP
 
-	err := filepath.Walk(reposDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return fmt.Errorf("error proccessing path %s: %w", path, err)
-		}
-		if info.IsDir() && isGitRepo(path) {
-			checkBranchInRepo(path, branchName)
-		}
-		return nil
-	})
+	dirs, err := os.ReadDir(reposDir)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("Error reading directory %s: %s\n", reposDir, err)
+		os.Exit(1)
+	}
+
+	for _, dir := range dirs {
+		if !dir.IsDir() {
+			continue
+		}
+
+		repoPath := filepath.Join(reposDir, dir.Name())
+
+		if !isGitRepo(repoPath) {
+			continue
+		}
+
+		checkBranchInRepo(repoPath, branchName)
 	}
 }
